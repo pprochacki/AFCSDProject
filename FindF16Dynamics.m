@@ -4,7 +4,7 @@
 %     Extract the longitudal and lateral 
 %     direction matrices.  These system matrices 
 %     will be used to create pole-zero mapping
-%     and the bode plots of each to each control
+%     and the bode plots of each to each control®
 %     input.
 % Author: Richard S. Russell
 % 
