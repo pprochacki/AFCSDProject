@@ -147,3 +147,10 @@ bode(SS_lat_hi(output,input),omega)
 hold on;
 bode(SS_lat_lo(output,input),omega)
 legend('hifi','lofi')
+
+%% Save trim data
+filename = sprintf('f16_trim_data_%dfps.mat', floor(velocity));
+
+disp(['Saving trim data to: ' filename]);
+
+save(filename, "SS_lat_lo", "SS_long_lo", "trim_state_lo", "altitude", "velocity");
