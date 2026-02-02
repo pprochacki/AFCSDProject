@@ -2,11 +2,7 @@ clear; clc; close all;
 
 load('f16_trim_data_600fps.mat');
 
-
-disp('--- Longitudinal Analysis ---')
 long_states = SS_long_lo.StateName;
-disp('Longitudinal States available:')
-disp(long_states);
 
 idx_vt = find(strcmp(long_states, 'Vt'));
 idx_alpha = find(strcmp(long_states, 'alpha'));
@@ -19,22 +15,21 @@ idx_elv = find(strcmp(long_states, 'elevator_state'));
 rigid_indices = [idx_vt, idx_alpha, idx_theta, idx_q];
 input_indices = [idx_thrust, idx_elv];
 
-A_lon = SS_long_lo.A(rigid_indices, rigid_indices);
-B_lon = SS_long_lo.A(rigid_indices, input_indices);
+A_ac_lon = SS_long_lo.A(rigid_indices, rigid_indices);
+B_ac_lon = SS_long_lo.A(rigid_indices, input_indices);
+C_ac_lon = eye(4);
+D_ac_lon = zeros(4, 2);
 
-sys_lon = ss(A_lon, B_lon, eye(4), 0);
+disp('--- Aircraft Matrices (Longitudinal) ---');
+disp('A_ac (Longitudinal):'); disp(A_ac_lon);
+disp('B_ac (Longitudinal):'); disp(B_ac_lon);
+
+sys_lon = ss(A_ac_lon, B_ac_lon, C_ac_lon, D_ac_lon);
 sys_lon.StateName = long_states(rigid_indices);
 sys_lon.InputName = {'Thrust_cmd', 'Elevator_cmd'};
 sys_lon.OutputName = sys_lon.StateName;
 
-disp('Longitudinal Eigenvalues:');
-damp(sys_lon)
-
-disp(' ');
-disp('--- Lateral Analysi ---');
 lat_states = SS_lat_lo.StateName;
-disp('Lateral States available:');
-disp(lat_states);
 
 idx_beta = find(strcmp(lat_states, 'beta'));
 idx_phi = find(strcmp(lat_states, 'phi'));
@@ -47,25 +42,96 @@ idx_rud = find(strcmp(lat_states, 'rudder_state'));
 lat_rigid_indices = [idx_beta, idx_phi, idx_p, idx_r];
 lat_input_indices = [idx_ail, idx_rud];
 
-A_lat = SS_lat_lo.A(lat_rigid_indices, lat_rigid_indices);
-B_lat = SS_lat_lo.A(lat_rigid_indices, lat_input_indices);
+A_ac_lat = SS_lat_lo.A(lat_rigid_indices, lat_rigid_indices);
+B_ac_lat = SS_lat_lo.A(lat_rigid_indices, lat_input_indices);
+C_ac_lat = eye(4);
+D_ac_lat = zeros(4, 2);
 
-sys_lat = ss(A_lat, B_lat, eye(4), 0);
+disp('--- Aircraft Matrices (Lateral) ---');
+disp('A_ac (Lateral):'); disp(A_ac_lat);
+disp('B_ac (Lateral):'); disp(B_ac_lat);
+
+sys_lat = ss(A_ac_lat, B_ac_lat, C_ac_lat, D_ac_lat);
 sys_lat.StateName = lat_states(lat_rigid_indices);
 sys_lat.InputName = {'Aileron_cmd', 'Rudder_cmd'};
 sys_lat.OutputName = sys_lat.StateName;
 
-disp('Lateral Eignenvalues:');
-damp(sys_lat)
-
-a_value_check = SS_long_lo.A(idx_elv, idx_elv); % Should be approx -20.2
-b_value_check = SS_long_lo.B(idx_elv, 2);        % Should be approx +20.2
+a_value_check = SS_long_lo.A(idx_elv, idx_elv);
+b_value_check = SS_long_lo.B(idx_elv, 2);
 
 disp(['Servo A value (should be -20.2): ', num2str(a_value_check)]);
 disp(['Servo B value (should be +20.2): ', num2str(b_value_check)]);
 
-figure;
+disp(' ');
+disp('--- Longitudinal Modes (Short Period & Phugoid) ---');
+[W_lon, Zeta_lon, Poles_lon] = damp(sys_lon);
+damp(sys_lon);
 
-step(sys_lon(4, 2), 10);
-title('Pitch Rate (q) response to Elevator Step');
-grid on;
+disp(' ');
+disp('--- Lateral Modes (Dutch Roll, Roll, Spiral) ---');
+[Wn_lat, Zeta_lat, Poles_lat] = damp(sys_lat);
+damp(sys_lat);
+
+
+lineWidth = 1.5;
+fontSize = 12;
+
+% Short Period
+[y_sp, t_sp] = initial(sys_lon, [0; 1*(pi/180); 0; 0], 0:0.01:5);
+
+fig1 = figure('Name', 'Short Period', 'Position', [100, 100, 800, 500]);
+plot(t_sp, y_sp(:,2)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', '\alpha [deg]'); 
+hold on;
+plot(t_sp, y_sp(:,4)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', 'q [deg/s]');
+grid on; legend('Location', 'Best');
+title('Short Period Mode'); xlabel('Time [s]'); ylabel('Amplitude [deg, deg/s]');
+set(gca, 'FontSize', fontSize);
+
+% Phugoid
+[y_ph, t_ph] = initial(sys_lon, [10; 0; 0; 0], 0:0.1:600);
+
+fig2 = figure('Name', 'Phugoid', 'Position', [150, 150, 800, 500]);
+yyaxis left
+plot(t_ph, y_ph(:,1), 'LineWidth', lineWidth, 'DisplayName', 'V_t [ft/s]');
+ylabel('Velocity [ft/s]');
+yyaxis right
+plot(t_ph, y_ph(:,3)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', '\theta [deg]');
+ylabel('Pitch Angle [deg]');
+
+grid on; legend('Location', 'Best');
+title('Phugoid Mode'); xlabel('Time [s]');
+set(gca, 'FontSize', fontSize);
+
+% Dutch Roll
+[y_dr, t_dr] = initial(sys_lat, [5*(pi/180); 0; 0; 0], 0:0.01:20);
+
+fig3 = figure('Name', 'Dutch Roll', 'Position', [200, 200, 800, 500]);
+plot(t_dr, y_dr(:,1)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', '\beta [deg]');
+hold on;
+plot(t_dr, y_dr(:,2)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', '\phi [deg]');
+plot(t_dr, y_dr(:,4)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', 'r [deg/s]');
+
+grid on; legend('Location', 'Best');
+title('Dutch Roll Mode'); xlabel('Time [s]'); ylabel('Amplitude [deg, deg/s]');
+set(gca, 'FontSize', fontSize);
+
+
+% Aperiodic Roll
+[y_roll, t_roll] = initial(sys_lat, [0; 0; 10*(pi/180); 0], 0:0.01:4);
+
+fig4 = figure('Name', 'Aperiodic Roll', 'Position', [250, 250, 800, 500]);
+plot(t_roll, y_roll(:,3)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', 'p [deg/s]');
+
+grid on; legend('Location', 'Best');
+title('Aperiodic Roll Mode'); xlabel('Time [s]'); ylabel('Roll Rate [deg/s]');
+set(gca, 'FontSize', fontSize);
+
+% Spiral Mode
+[y_spi, t_spi] = initial(sys_lat, [0; 5*(pi/180); 0; 0], 0:0.1:200);
+
+fig5 = figure('Name', 'Spiral Mode', 'Position', [300, 300, 800, 500]);
+plot(t_spi, y_spi(:,2)*(180/pi), 'LineWidth', lineWidth, 'DisplayName', '\phi [deg]');
+
+grid on; legend('Location', 'Best');
+title('Spiral Mode'); xlabel('Time [s]'); ylabel('Bank Angle [deg]');
+set(gca, 'FontSize', fontSize);
