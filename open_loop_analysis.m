@@ -64,14 +64,21 @@ disp(['Servo B value (should be +20.2): ', num2str(b_value_check)]);
 
 disp(' ');
 disp('--- Longitudinal Modes (Short Period & Phugoid) ---');
-[W_lon, Zeta_lon, Poles_lon] = damp(sys_lon);
-damp(sys_lon);
+[Wn_lon, Zeta_lon, Poles_lon] = damp(sys_lon);
+T_half_lon = log(2) ./ abs(real(Poles_lon));
+period_lon = 2*pi ./ abs(imag(Poles_lon));
+damp(sys_lon)
+disp(table(Poles_lon, period_lon, T_half_lon, ...
+    'VariableNames', {'Pole', 'Period', 'T_half'}));
 
 disp(' ');
 disp('--- Lateral Modes (Dutch Roll, Roll, Spiral) ---');
 [Wn_lat, Zeta_lat, Poles_lat] = damp(sys_lat);
-damp(sys_lat);
-
+T_half_lat = log(2) ./ abs(real(Poles_lat));
+period_lat = 2*pi ./ abs(imag(Poles_lat));
+damp(sys_lat)
+disp(table(Poles_lat, period_lat, T_half_lat, ...
+    'VariableNames', {'Pole', 'Period' 'T_half'}));
 
 lineWidth = 1.5;
 fontSize = 12;
