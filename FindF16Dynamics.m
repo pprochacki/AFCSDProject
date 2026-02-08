@@ -12,6 +12,10 @@
 %================================================
 clear;
 
+acc_pos_analysis = 0; % 0 if doing the analysis and 1 if not
+
+xa = 0; %initial accelerometer position in ft
+
 global fi_flag_Simulink
 
 newline = sprintf('\n');
@@ -96,6 +100,87 @@ SS_lat_hi.StateName = SS_hi.StateName(lat_states);
 SS_lat_lo.InputName= SS_lo.InputName(lat_inputs);
 SS_lat_hi.InputName= SS_hi.InputName(lat_inputs);
 
+%% Accelerator Position Analysis
+if acc_pos_analysis
+
+    xa_positions = [0, 5, 5.9, 6, 7, 15];
+    
+    figure('Name', 'Normal Acceleration Step Response');
+    hold on;
+    legend_entries = {};
+    
+    for i = 1:length(xa_positions)
+        xa = xa_positions(i);
+    
+        SS_lo_an = linearize('LIN_F16Block_acc_pos');
+        an_index = size(SS_lo_an.C, 1);
+        sys_an = SS_lo_an(an_index, 2);
+    
+        opt = stepDataOptions('StepAmplitude', -1);
+        step(sys_an, 3, opt);
+        legend_entries{end+1} = sprintf('xa = %.1f ft', xa);
+    end
+    
+    legend(legend_entries, 'Location', 'southeast');
+    title('Initial Normal Acceleration Response to Negative Step Elevator');
+    xlabel('Time'); ylabel('a_n (g)');
+    grid on; hold off;
+    
+    figure('Name', 'ICR Identification - Zoomed');
+    hold on;
+    for i = 1:length(xa_positions)
+        xa = xa_positions(i);
+    
+        SS_lo_an = linearize('LIN_F16Block_acc_pos');
+        an_index = size(SS_lo_an.C, 1);
+        sys_an = SS_lo_an(an_index, 2);
+    
+        opt = stepDataOptions('StepAmplitude', -1);
+        step(sys_an, 0.25, opt);
+    end
+    yline(0, '--k'); % Add a zero line for clarity
+    title('Initial Normal Acceleration (0 - 0.25s)');
+    xlabel('Time'); ylabel('a_n (g)');
+    legend(legend_entries, 'Location', 'southeast');
+    grid on;
+    
+    xa = 0;
+    SS_lo_0 = linearize('LIN_F16Block_acc_pos');
+    
+    C_an = SS_lo_0.C(end, :);
+    D_an = SS_lo_0.D(end, :);
+    
+    fprintf('Ouput Equation for an (xa=0):\n');
+    disp('y_an = C * x + D * u');
+    fprintf('C matrix row:\n'); disp(C_an);
+    fprintf('D matrix row:\n'); disp(D_an);
+    
+    tf_an_elevator = tf(SS_lo_0(end, 2)); 
+    
+    fprintf('Transfer Function (Elevator to an) at xa=0:\n');
+    display(tf_an_elevator);
+    
+    for i = 1:length(xa_positions)
+        xa = xa_positions(i);
+        SS_loop = linearize('LIN_F16Block_acc_pos');
+        sys_channel = SS_loop(end, 2); % Get 'an' output from Elevator input
+        
+        % Calculate Zeros
+        z = tzero(sys_channel);
+        
+        fprintf('For xa = %.1f ft, the zeros are:\n', xa);
+        disp(z);
+    end
+
+end
+
+%% Save trim data
+filename = sprintf('f16_trim_data_%dfps.mat', floor(velocity));
+
+disp(['Saving trim data to: ' filename]);
+
+save(filename, "SS_lat_lo", "SS_long_lo", "trim_state_lo", "altitude", "velocity");
+
 
 %% All Poles
 figure(1); 
@@ -148,9 +233,3 @@ hold on;
 bode(SS_lat_lo(output,input),omega)
 legend('hifi','lofi')
 
-%% Save trim data
-filename = sprintf('f16_trim_data_%dfps.mat', floor(velocity));
-
-disp(['Saving trim data to: ' filename]);
-
-save(filename, "SS_lat_lo", "SS_long_lo", "trim_state_lo", "altitude", "velocity");
