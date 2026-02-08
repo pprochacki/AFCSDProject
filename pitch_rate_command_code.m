@@ -262,14 +262,16 @@ q_ss
 x_gibson = (theta_max-theta_cl(end))/q_ss;
 y_gibson = DB_theoretical; % DB / q_ss
 
-fprintf('Gibson Metric (DB/q_ss): %.4f sec\n', y_gibson);
+fprintf('Gibson Metric Goal (DB/q_ss): %.4f sec\n', y_gibson);
+fprintf('Gibson Metric Obtained (DB/q_ss): %.4f sec\n', x_gibson);
+fprintf('Pitch Rate Overshoot Obtained (q_m/q_ss): %.4f\n', q_max/q_ss);
 
 figure('Name','Gibson Criterion');
 hold on;
 % Draw "Satisfactory" Region (Triangle from Fig 7.3)
 patch([0, 0.3, 0.05], [1, 1, 3], 'c', 'FaceAlpha', 0.3);
-plot(0, y_gibson, 'ro', 'MarkerSize', 10, 'LineWidth', 3);
-text(0.02, y_gibson, '  Design Point');
+plot(0, x_gibson, 'ro', 'MarkerSize', 10, 'LineWidth', 3);
+text(0.02, x_gibson, '  Design Point');
 xlim([-0.1 0.4]); ylim([1 3.5]);
 xlabel('Smear (OS/q_s) [s]'); ylabel('Pitch Rate Overshoot (q_m/q_s)');
 % X-axis: DB/q_s (positive right)
@@ -279,7 +281,7 @@ clf;
 hold on;
 % Points approx: (0, 1) -> (0.3, 1) -> (0, 3)
 patch([0 0.3 0.06 0], [1 1 3 3], 'c', 'FaceAlpha', 0.3);
-plot(y_gibson, q_max/q_ss, 'ro', 'MarkerSize', 10, 'LineWidth', 3);
+plot(x_gibson, q_max/q_ss, 'ro', 'MarkerSize', 10, 'LineWidth', 3);
 xlabel('Dropback (DB/q_s) [s]'); ylabel('Pitch Rate Overshoot Ratio (q_m/q_s)');
 title('Gibson Dropback Criterion');
 grid on;
