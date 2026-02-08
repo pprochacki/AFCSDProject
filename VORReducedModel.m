@@ -12,5 +12,3 @@ sys_low = ss(A_red, B_red, C_red, D_red);
 sys_low.StateName = {'phi', 'psi', 'r', 'p', 'beta'};
 sys_low.InputName = {'aileron', 'rudder'};
 sys_low.OutputName = {'r', 'p', 'beta'};
-
-display(B_red);

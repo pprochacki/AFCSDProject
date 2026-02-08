@@ -57,7 +57,7 @@ fi_flag_Simulink = 0;
 trim_state_lin = trim_state_lo; trim_thrust_lin = trim_thrust_lo; trim_control_lin = trim_control_lo;
 operating_point = operpoint('LIN_F16Block'); % retrieves initial conditions from integrators
 operating_point.Inputs(1).u = trim_thrust_lin; operating_point.Inputs(2).u = trim_control_lin(1);
-operating_point.Inputs(3).u = trim_control_l    in(2); operating_point.Inputs(4).u = trim_control_lin(3);
+operating_point.Inputs(3).u = trim_control_lin(2); operating_point.Inputs(4).u = trim_control_lin(3);
 
 SS_lo = linearize('LIN_F16Block');
 
